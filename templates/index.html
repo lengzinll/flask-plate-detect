@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Video Stream</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-100 min-h-screen flex flex-col items-center justify-center"
+  >
+    <h1 class="text-4xl font-bold text-gray-800 mb-8">
+      Plate Detection From Stream
+    </h1>
+
+    <!-- Camera URL Input Form -->
+    <form
+      id="camera-form"
+      class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-8 w-full max-w-lg"
+    >
+      <div class="mb-4">
+        <label
+          class="block text-gray-700 text-sm font-bold mb-2"
+          for="camera_url"
+        >
+          Camera URL For Example : rtsp://admin:Admin123456@192.168.39.117:554
+        </label>
+        <input
+          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="camera_url"
+          type="text"
+          placeholder="Enter camera URL"
+          required
+        />
+      </div>
+      <div class="flex items-center justify-between">
+        <button
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="submit"
+        >
+          Start Detect
+        </button>
+      </div>
+    </form>
+
+    <div
+      class="flex gap-x-10 h-[80vh] overflow-hidden hidden"
+      id="video-container"
+    >
+      <!-- Video Stream Display -->
+      <div class="w-[80%] max-w-4xl shadow-lg rounded-lg overflow-hidden">
+        <img
+          class="w-full border-4 border-green-300 rounded-lg"
+          id="video-stream"
+          alt="Video Stream"
+        />
+      </div>
+
+      <!-- Detected License Plates List -->
+      <div class="w-[20%] max-w-lg">
+        <p class="text-gray-800 mb-4">Detected</p>
+        <ul
+          id="license-plates-list"
+          class="bg-white shadow-md rounded p-4 h-full overflow-auto"
+        >
+          <!-- License plates will be added here -->
+        </ul>
+      </div>
+    </div>
+
+    <footer class="mt-8 text-gray-600 text-sm">
+      Powered by Flask and YOLO
+    </footer>
+
+    <script>
+      const form = document.getElementById("camera-form");
+      const videoContainer = document.getElementById("video-container");
+      const videoStream = document.getElementById("video-stream");
+      const licensePlatesList = document.getElementById("license-plates-list");
+
+      // Function to update the license plates list
+      function updateLicensePlates(plates) {
+        licensePlatesList.innerHTML = ""; // Clear the current list
+        plates.forEach((plate) => {
+          const a = document.createElement("a");
+          const br = document.createElement("br");
+          a.href = "http://localhost:3000?q=" + plate.license_plate;
+          a.target = "_blank";
+          a.className = "py-2 hover:text-green-300";
+          a.textContent = plate.license_plate; // Assuming license_plate is a property in the object
+          licensePlatesList.appendChild(a);
+          a.appendChild(br);
+        });
+      }
+
+      function getPlates() {
+        fetch("/get_detected_plates") // Adjust the endpoint accordingly
+          .then((response) => response.json())
+          .then((data) => {
+            updateLicensePlates(data.license_plates); // Update the list with new plates
+          })
+          .catch((error) =>
+            console.error("Error fetching license plates:", error)
+          );
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const cameraUrl = document.getElementById("camera_url").value;
+        videoStream.src =
+          "/video_feed?camera_url=" + encodeURIComponent(cameraUrl);
+        videoContainer.classList.remove("hidden");
+        form.classList.add("hidden");
+
+        getPlates();
+      });
+
+      // Optional: Set up a way to poll for new detected plates every few seconds
+      setInterval(() => {
+        getPlates();
+      }, 20 * 1000); // Poll every 5 seconds
+    </script>
+  </body>
+</html>
